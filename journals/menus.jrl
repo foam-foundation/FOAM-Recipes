@@ -38,22 +38,7 @@ p({
   }
 })
 
-p({
-  "class":"foam.core.menu.Menu",
-  "id":"cookbook.recipeStep",
-  "parent":"cookbook",
-  "label":"Recipe Step",
-  "order":2,
-  "authenticate":true,
-  "keywords":[""],
-  "handler":{
-    "class":"foam.core.menu.DAOMenu2",
-    "config":{
-      "class":"foam.comics.v2.DAOControllerConfig",
-      "daoKey":"recipeStepDAO"
-    }
-  }
-})
+
 
 p({
   "class":"foam.core.menu.Menu",
@@ -72,19 +57,4 @@ p({
   }
 })
 
-p({
-  "class":"foam.core.menu.Menu",
-  "id":"cookbook.ingredientAmount",
-  "parent":"cookbook",
-  "label":"Ingredient Amount",
-  "order":4,
-  "authenticate":true,
-  "keywords":[""],
-  "handler":{
-    "class":"foam.core.menu.DAOMenu2",
-    "config":{
-      "class":"foam.comics.v2.DAOControllerConfig",
-      "daoKey":"ingredientAmountDAO"
-    }
-  }
-})
+
