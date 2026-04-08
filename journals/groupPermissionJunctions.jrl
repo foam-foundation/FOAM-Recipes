@@ -16,6 +16,7 @@ p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"recipes",targetId:"p
 
 // Cook Book menus
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"recipes",targetId:"menu.read.cookbook"})
+p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"recipes",targetId:"menu.read.cookbook.createRecipe"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"recipes",targetId:"menu.read.cookbook.recipe"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"recipes",targetId:"menu.read.cookbook.ingredient"})
 p({class:"foam.core.auth.GroupPermissionJunction",sourceId:"recipes",targetId:"menu.read.cookbook.ingredientAmount"})

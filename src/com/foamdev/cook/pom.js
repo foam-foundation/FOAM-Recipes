@@ -13,7 +13,9 @@ foam.POM({
     { name: 'IngredientAmount',        flags: 'js|java' },
     { name: 'RecipeStep',              flags: 'js|java' },
     { name: 'Relationships',           flags: 'js|java' },
-    { name: 'ConversionService',       flags: 'js|java' }
+    { name: 'ConversionService',       flags: 'js|java' },
+    { name: 'RecipeDetailView',        flags: 'js' },
+    { name: 'RecipeCreateView',        flags: 'js' }
   ],
 
   javaFiles: [
