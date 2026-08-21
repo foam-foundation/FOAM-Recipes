@@ -6,5 +6,5 @@ p({
   "name":"recipes",
   "registrationGroup":"recipes",
   "appName":"undefined",
-  "defaultMenu": ["recipes.recipe"]
+  "defaultMenu": ["cookbook.createRecipe"]
 })
