@@ -1,3 +1,3 @@
 [submodule "foam3"]
 	path = foam3
-	url = git@github.com:kgrgreer/foam3.git
+	url = git@github.com:foam-foundation/foam.git
