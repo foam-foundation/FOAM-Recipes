@@ -86,50 +86,58 @@ foam.CLASS({
     function render() {
       var self = this;
 
+      // data is loaded asynchronously by DAOSummaryView, so render reactively:
+      // the slot re-runs when data arrives, avoiding a read of this.data before
+      // it's set.
       this.addClass()
-        .start().addClass(this.myClass('header'))
-          .start('h1').addClass(this.myClass('title')).add(this.data.name$).end()
-          .start().addClass(this.myClass('category')).add(this.data.category$).end()
-          .start().addClass(this.myClass('description')).add(this.data.description$).end()
-        .end()
+        .add(this.slot(function(data) {
+          if ( ! data ) return;
+          return self.E()
+            .start().addClass(self.myClass('header'))
+              .start('h1').addClass(self.myClass('title')).add(data.name$).end()
+              .start().addClass(self.myClass('category')).add(data.category$).end()
+              .start().addClass(self.myClass('description')).add(data.description$).end()
+            .end()
 
-        // Steps Section
-        .start().addClass(this.myClass('section'))
-          .start().addClass(this.myClass('section-title')).add('Steps').end()
-          .select(this.data.steps, function(step) {
-            this
-              .start().addClass(self.myClass('step'))
-                .start('span').addClass(self.myClass('step-rank'))
-                  .add('Step ', step.rank)
-                .end()
-                .callIf(step.category, function() {
-                  this.start('span').addClass(self.myClass('step-category'))
-                    .add('(', step.category.label, ')')
-                  .end();
-                })
-                .callIf(step.isPrep, function() {
-                  this.start('span').addClass(self.myClass('step-prep'))
-                    .add('[Prep]')
-                  .end();
-                })
-                .start().addClass(self.myClass('step-instruction'))
-                  .add(step.instruction)
-                .end()
-                // Ingredients for this step
-                .start().addClass(self.myClass('ingredients'))
-                  .select(step.ingredientAmounts, function(ia) {
-                    this.start().addClass(self.myClass('ingredient'))
-                      .add(ia.amount, ' ', ia.unit?.label, ' ')
-                      .call(async function() {
-                        var ingredient = await self.ingredientDAO.find(ia.ingredient);
-                        if ( ingredient ) this.add(ingredient.name);
+            // Steps Section
+            .start().addClass(self.myClass('section'))
+              .start().addClass(self.myClass('section-title')).add('Steps').end()
+              .select(data.steps, function(step) {
+                this
+                  .start().addClass(self.myClass('step'))
+                    .start('span').addClass(self.myClass('step-rank'))
+                      .add('Step ', step.rank)
+                    .end()
+                    .callIf(step.category, function() {
+                      this.start('span').addClass(self.myClass('step-category'))
+                        .add('(', step.category.label, ')')
+                      .end();
+                    })
+                    .callIf(step.isPrep, function() {
+                      this.start('span').addClass(self.myClass('step-prep'))
+                        .add('[Prep]')
+                      .end();
+                    })
+                    .start().addClass(self.myClass('step-instruction'))
+                      .add(step.instruction)
+                    .end()
+                    // Ingredients for this step (*:* relationship — iterate its .dao)
+                    .start().addClass(self.myClass('ingredients'))
+                      .select(step.ingredientAmounts.dao, function(ia) {
+                        this.start().addClass(self.myClass('ingredient'))
+                          .add(ia.amount, ' ', ia.unit?.label, ' ')
+                          .call(async function() {
+                            var ingredient = await self.ingredientDAO.find(ia.ingredient);
+                            if ( ingredient ) this.add(ingredient.name);
+                          })
+                        .end();
                       })
-                    .end();
-                  })
-                .end()
-              .end();
-          })
-        .end();
+                    .end()
+                  .end();
+              })
+            .end();
+        }));
     }
+
   ]
 });
