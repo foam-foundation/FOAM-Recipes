@@ -33,7 +33,8 @@ p({
     "class":"foam.core.menu.DAOMenu2",
     "config":{
       "class":"foam.comics.v2.DAOControllerConfig",
-      "daoKey":"recipeDAO"
+      "daoKey":"recipeDAO",
+      "detailView":{"class":"com.foamdev.cook.RecipeDetailView"}
     }
   }
 })

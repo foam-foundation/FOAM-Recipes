@@ -15,21 +15,27 @@ foam.CLASS({
     'recipeDAO',
     'recipeStepDAO',
     'ingredientAmountDAO',
-    'ingredientDAO'
+    'ingredientDAO',
+    'notify',
+    'routeTo'
   ],
 
   requires: [
     'com.foamdev.cook.Recipe',
     'com.foamdev.cook.RecipeStep',
+    'com.foamdev.cook.Ingredient',
     'com.foamdev.cook.IngredientAmount',
-    'foam.dao.MDAO'
+    'foam.dao.MDAO',
+    'foam.log.LogLevel',
+    'foam.u2.dialog.Popup'
   ],
 
   css: `
     ^ {
       padding: 16px;
       font-family: sans-serif;
-      max-width: 800px;
+      width: 100%;
+      box-sizing: border-box;
     }
     ^title {
       font-size: 24px;
@@ -86,13 +92,50 @@ foam.CLASS({
     ^ingredient-amount {
       width: 60px;
     }
-    ^ingredient-name {
-      width: 150px;
+    ^ingredient-select {
+      min-width: 180px;
     }
-    ^ingredient-row {
-      display: flex;
+    ^ingredient input,
+    ^ingredient select {
+      height: 34px;
+      box-sizing: border-box;
+    }
+    ^ingredient button {
+      height: 34px;
+    }
+    ^btn-icon {
+      width: 34px;
+      padding: 0;
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
+      justify-content: center;
+      font: inherit;
+      font-size: 18px;
+      font-weight: bold;
+      line-height: 1;
+    }
+    ^popup {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 24px;
+      min-width: 320px;
+    }
+    ^popup-title {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    ^popup input,
+    ^popup select {
+      width: 100%;
+      height: 34px;
+      box-sizing: border-box;
+    }
+    ^popup ^field {
+      margin-bottom: 0;
+    }
+    ^popup ^actions {
+      margin-top: 8px;
     }
     ^actions {
       margin-top: 24px;
@@ -123,16 +166,19 @@ foam.CLASS({
     {
       class: 'String',
       name: 'recipeName',
-      label: 'Recipe Name'
+      label: 'Name',
+      required: true
     },
     {
       class: 'Enum',
       of: 'com.foamdev.cook.RecipeCategory',
-      name: 'recipeCategory'
+      name: 'recipeCategory',
+      label: 'Category'
     },
     {
       class: 'String',
       name: 'recipeDescription',
+      label: 'Description',
       view: { class: 'foam.u2.tag.TextArea', rows: 3, cols: 60 }
     },
     {
@@ -163,6 +209,11 @@ foam.CLASS({
       name: 'ingredientCategories',
       documentation: 'Maps stepIndex-iaIndex to ingredient category',
       factory: function() { return {}; }
+    },
+    {
+      class: 'Int',
+      name: 'ingredientVersion',
+      documentation: 'Bumped to force the steps list to re-render when map contents change in place (e.g. after creating a new ingredient), since Map properties compare by value.'
     }
   ],
 
@@ -185,18 +236,9 @@ foam.CLASS({
 
         // Recipe Basic Info
         .start().addClass(this.myClass('section'))
-          .start().addClass(this.myClass('field'))
-            .start('label').addClass(this.myClass('field-label')).add('Name').end()
-            .tag({class: 'foam.u2.TextField', data$: this.recipeName$})
-          .end()
-          .start().addClass(this.myClass('field'))
-            .start('label').addClass(this.myClass('field-label')).add('Category').end()
-            .add(this.RECIPE_CATEGORY)
-          .end()
-          .start().addClass(this.myClass('field'))
-            .start('label').addClass(this.myClass('field-label')).add('Description').end()
-            .add(this.RECIPE_DESCRIPTION)
-          .end()
+          .start().addClass(this.myClass('field')).add(this.RECIPE_NAME.__).end()
+          .start().addClass(this.myClass('field')).add(this.RECIPE_CATEGORY.__).end()
+          .start().addClass(this.myClass('field')).add(this.RECIPE_DESCRIPTION.__).end()
         .end()
 
         // Steps Section
@@ -210,7 +252,7 @@ foam.CLASS({
               .on('click', () => this.addStep())
             .end()
           .end()
-          .add(this.slot(function(steps, stepIngredients) {
+          .add(this.slot(function(steps, stepIngredients, ingredientVersion) {
             return this.E().forEach(steps, function(step, index) {
               var ingredients = stepIngredients[index] || [];
               this
@@ -224,18 +266,11 @@ foam.CLASS({
                       .on('click', () => self.removeStep(index))
                     .end()
                   .end()
-                  .start().addClass(self.myClass('field'))
-                    .start('label').addClass(self.myClass('field-label')).add('Instruction').end()
-                    .tag({class: 'foam.u2.tag.TextArea', rows: 2, cols: 50, data$: step.instruction$})
-                  .end()
-                  .start().addClass(self.myClass('field'))
-                    .start('label').addClass(self.myClass('field-label')).add('Category').end()
-                    .tag({class: 'foam.u2.view.ChoiceView', choices: com.foamdev.cook.StepCategory.VALUES.map(v => [v, v.label]), data$: step.category$})
-                  .end()
-                  .start().addClass(self.myClass('field'))
-                    .tag({class: 'foam.u2.CheckBox', data$: step.isPrep$})
-                    .add(' Prep step')
-                  .end()
+                  .startContext({ data: step })
+                    .start().addClass(self.myClass('field')).add(self.RecipeStep.INSTRUCTION.__).end()
+                    .start().addClass(self.myClass('field')).add(self.RecipeStep.CATEGORY.__).end()
+                    .start().addClass(self.myClass('field')).add(self.RecipeStep.IS_PREP.__).end()
+                  .endContext()
 
                   // Ingredients for this step
                   .start().addClass(self.myClass('field'))
@@ -244,63 +279,37 @@ foam.CLASS({
                       var nameKey = index + '-' + iaIndex;
                       var existingChoices = [['', '-- Select existing --'], ...self.availableIngredients.map(i => [i.name, i.name])];
                       this.start().addClass(self.myClass('ingredient'))
-                        // Row 1: Amount, Unit, Remove button
-                        .start().addClass(self.myClass('ingredient-row'))
-                          .start().addClass(self.myClass('ingredient-amount'))
-                            .tag({class: 'foam.u2.FloatView', data$: ia.amount$})
-                          .end()
-                          .tag({class: 'foam.u2.view.ChoiceView', choices: com.foamdev.cook.Unit.VALUES.map(v => [v, v.label]), data$: ia.unit$})
-                          .start('button')
-                            .addClass(self.myClass('btn'))
-                            .addClass(self.myClass('btn-danger'))
-                            .add('X')
-                            .on('click', () => self.removeIngredient(index, iaIndex))
-                          .end()
+                        .start().addClass(self.myClass('ingredient-amount'))
+                          .tag({class: 'foam.u2.FloatView', data$: ia.amount$})
                         .end()
-                        // Row 2: Ingredient selection (dropdown or new name) + category
-                        .start().addClass(self.myClass('ingredient-row'))
-                          .start('select')
-                            .on('change', function(e) {
-                              if ( e.target.value ) {
-                                var newMap = Object.assign({}, self.ingredientNames);
-                                newMap[nameKey] = e.target.value;
-                                self.ingredientNames = newMap;
-                              }
-                            })
-                            .forEach(existingChoices, function(choice) {
-                              this.start('option')
-                                .attrs({value: choice[0], selected: choice[0] === self.ingredientNames[nameKey]})
-                                .add(choice[1])
-                              .end();
-                            })
-                          .end()
-                          .add(' or ')
-                          .start().addClass(self.myClass('ingredient-name'))
-                            .tag({
-                              class: 'foam.u2.TextField',
-                              placeholder: 'New ingredient',
-                              data: self.ingredientNames[nameKey] || '',
-                              onKey: true
-                            }).on('input', function(e) {
-                              var newMap = Object.assign({}, self.ingredientNames);
-                              newMap[nameKey] = e.target.value;
-                              self.ingredientNames = newMap;
-                            })
-                          .end()
-                          .start('select')
-                            .on('change', function(e) {
-                              var newMap = Object.assign({}, self.ingredientCategories);
-                              newMap[nameKey] = e.target.value;
-                              self.ingredientCategories = newMap;
-                            })
-                            .start('option').attrs({value: ''}).add('Category').end()
-                            .forEach(com.foamdev.cook.IngredientCategory.VALUES, function(cat) {
-                              this.start('option')
-                                .attrs({value: cat.name, selected: cat.name === self.ingredientCategories[nameKey]})
-                                .add(cat.label)
-                              .end();
-                            })
-                          .end()
+                        .tag({class: 'foam.u2.view.ChoiceView', choices: com.foamdev.cook.Unit.VALUES.map(v => [v, v.label]), data$: ia.unit$})
+                        .start('select')
+                          .addClass(self.myClass('ingredient-select'))
+                          .on('change', function(e) {
+                            var newMap = Object.assign({}, self.ingredientNames);
+                            newMap[nameKey] = e.target.value;
+                            self.ingredientNames = newMap;
+                          })
+                          .forEach(existingChoices, function(choice) {
+                            this.start('option')
+                              .attrs({value: choice[0], selected: choice[0] === self.ingredientNames[nameKey]})
+                              .add(choice[1])
+                            .end();
+                          })
+                        .end()
+                        .start('button', { tooltip: 'New ingredient' })
+                          .addClass(self.myClass('btn'))
+                          .addClass(self.myClass('btn-secondary'))
+                          .addClass(self.myClass('btn-icon'))
+                          .add('+')
+                          .on('click', () => self.openNewIngredientPopup(index, iaIndex))
+                        .end()
+                        .start('button')
+                          .addClass(self.myClass('btn'))
+                          .addClass(self.myClass('btn-danger'))
+                          .addClass(self.myClass('btn-icon'))
+                          .add('×')
+                          .on('click', () => self.removeIngredient(index, iaIndex))
                         .end()
                       .end();
                     })
@@ -397,6 +406,71 @@ foam.CLASS({
       this.ingredientCategories = newCats;
     },
 
+    function openNewIngredientPopup(stepIndex, iaIndex) {
+      var self    = this;
+      var nameKey = stepIndex + '-' + iaIndex;
+      var draft   = this.Ingredient.create({}, this);
+      var popup   = this.Popup.create({}, this);
+
+      popup
+        .start().addClass(this.myClass('popup'))
+          .start().addClass(this.myClass('popup-title')).add('New Ingredient').end()
+          .start().addClass(this.myClass('field'))
+            .start('label').addClass(this.myClass('field-label')).add('Name').end()
+            .tag({ class: 'foam.u2.TextField', data$: draft.name$ })
+          .end()
+          .start().addClass(this.myClass('field'))
+            .start('label').addClass(this.myClass('field-label')).add('Category').end()
+            .tag({
+              class: 'foam.u2.view.ChoiceView',
+              placeholder: 'Category',
+              choices: com.foamdev.cook.IngredientCategory.VALUES.map(c => [c, c.label]),
+              data$: draft.category$
+            })
+          .end()
+          .start().addClass(this.myClass('actions'))
+            .start('button')
+              .addClass(this.myClass('btn'))
+              .addClass(this.myClass('btn-primary'))
+              .add('Add')
+              .on('click', function() {
+                var name = (draft.name || '').trim();
+                if ( ! name ) { popup.close(); return; }
+
+                // Make the new ingredient selectable in the dropdowns.
+                if ( ! self.availableIngredients.some(i => i.name === name) ) {
+                  self.availableIngredients = [...self.availableIngredients, draft];
+                }
+
+                // Select it for this row and remember its category.
+                var names = Object.assign({}, self.ingredientNames);
+                names[nameKey] = name;
+                self.ingredientNames = names;
+
+                var cats = Object.assign({}, self.ingredientCategories);
+                cats[nameKey] = draft.category ? draft.category.name : '';
+                self.ingredientCategories = cats;
+
+                // Re-render the step list so the new option shows and is selected.
+                // The map contents changed in place, and Map properties compare by
+                // value — so a shallow copy would compare equal and not fire. Bump a
+                // version counter the slot depends on instead.
+                self.ingredientVersion++;
+                popup.close();
+              })
+            .end()
+            .start('button')
+              .addClass(this.myClass('btn'))
+              .addClass(this.myClass('btn-secondary'))
+              .add('Cancel')
+              .on('click', () => popup.close())
+            .end()
+          .end()
+        .end();
+
+      this.add(popup);
+    },
+
     async function findOrCreateIngredient(name, category) {
       if ( ! name || ! name.trim() ) return null;
 
@@ -425,8 +499,12 @@ foam.CLASS({
     },
 
     async function saveRecipe() {
-      if ( ! this.recipeName ) {
-        alert('Please enter a recipe name');
+      if ( this.errors_ ) {
+        // errors_ is a list of [ propertyAxiom, message ] pairs. Name the fields
+        // rather than say they're "highlighted" — an empty required field is shown
+        // as a suggestion by PropertyBorder, not a red highlight.
+        var missing = this.errors_.map(e => e[0].label || e[0].name).join(', ');
+        this.notify('Please complete: ' + missing, '', this.LogLevel.ERROR);
         return;
       }
 
@@ -460,24 +538,18 @@ foam.CLASS({
           }
 
           ia = await this.ingredientAmountDAO.put(ia);
-          // Link to step via the *:* relationship
-          await step.ingredientAmounts.put(ia);
+          // Link to step via the *:* relationship (add() creates the junction record)
+          await step.ingredientAmounts.add(ia);
         }
       }
 
-      alert('Recipe "' + this.recipeName + '" saved successfully!');
+      this.notify('Recipe "' + this.recipeName + '" saved successfully!', '', this.LogLevel.INFO);
 
-      // Reset form
-      this.recipeName = '';
-      this.recipeDescription = '';
-      this.recipeCategory = com.foamdev.cook.RecipeCategory.OTHER;
-      this.steps = [];
-      this.stepIngredients = {};
-      this.ingredientNames = {};
-      this.ingredientCategories = {};
-
-      // Reload available ingredients
-      this.loadIngredients();
+      // Leave the create view and go to the recipe list. Deep-linking to a single
+      // record (cookbook.recipe/<id>) doesn't resolve through the menu route:
+      // pushMenu_ can't find that id and falls back to the default menu
+      // (createRecipe), which is why the screen appeared to stay on create.
+      this.routeTo('cookbook.recipe');
     }
   ]
 });

@@ -26,6 +26,7 @@ foam.CLASS({
     {
       class: 'Boolean',
       name: 'isPrep',
+      label: 'Prep Step',
       value: false
     }
   ],
