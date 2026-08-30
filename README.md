@@ -19,7 +19,7 @@ This repository contains the completed [FOAM][foam-intro] cooking recipe databas
 
 The full tutorial has been moved to the main FOAM3 repository:
 
-**[FOAM Tutorial](https://github.com/kgrgreer/foam3/blob/development/doc/tutorials/foam-tutorial.md)**
+**[FOAM Tutorial](https://github.com/foam-foundation/foam3/blob/development/doc/tutorials/foam-tutorial.md)**
 
 If you want to learn FOAM by building the application from scratch, follow the tutorial there. You'll start with an empty repository and build up the application step by step.
 
@@ -36,7 +36,7 @@ You need <code>Java</code>, <code>Node.js</code> and <code>Maven</code> installe
 Clone this repository, then add FOAM as a submodule:
 
 ```
-git submodule add git@github.com:kgrgreer/foam3.git
+git submodule add git@github.com:foam-foundation/foam3.git
 git submodule update --init --recursive --rebase --force
 ```
 
@@ -72,4 +72,4 @@ password: demopassword
 <!-- List all links here -->
 
 [foam-intro]: https://docs.google.com/presentation/d/1yT6Yb5aJJ3OXD3n_8GKC_vtTs_rxJpzOQRgU1Oa_1r4/edit?usp=sharing
-[foam-install]: https://github.com/kgrgreer/foam3/blob/development/INSTALL.md
+[foam-install]: https://github.com/foam-foundation/foam3/blob/development/INSTALL.md
