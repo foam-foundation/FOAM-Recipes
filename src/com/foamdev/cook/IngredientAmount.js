@@ -7,7 +7,7 @@ foam.CLASS({
     { name: 'other', title: 'Alternative', order: 2 }
   ],
 
-  tableColumns: [ 'id', 'amount', 'unit', 'ingredeint' ],
+  tableColumns: [ 'id', 'amount', 'unit', 'ingredient' ],
 
   properties: [
     {
