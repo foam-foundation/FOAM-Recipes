@@ -12,7 +12,11 @@ foam.RELATIONSHIP({
     section: 'main',
     gridColumns: 4,
     required: true,
-    view: { class: 'com.foamdev.cook.IngredientPickerView' }
+    view: { class: 'com.foamdev.cook.IngredientPickerView' },
+    tableCellFormatter: async function() {
+      let ingredient = await this.data.ingredient$find;
+      this.add(ingredient.toSummary());
+    }
   },
   sourceProperty: {
     hidden: true

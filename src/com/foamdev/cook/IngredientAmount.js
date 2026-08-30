@@ -7,6 +7,8 @@ foam.CLASS({
     { name: 'other', title: 'Alternative', order: 2 }
   ],
 
+  tableColumns: [ 'id', 'amount', 'unit', 'ingredeint' ],
+
   properties: [
     {
       class: 'Long',

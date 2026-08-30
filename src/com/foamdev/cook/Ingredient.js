@@ -22,8 +22,15 @@ foam.CLASS({
   ],
 
   methods: [
-    function toSummary() {
-      return this.name;
+    {
+      name: 'toSummary',
+      type: 'String',
+      code: async function() {
+        return this.name + " (" + this.category + ")";
+      },
+      javaCode: `
+        return getName() + " (" + getCategory() + ")";
+      `
     }
   ]
 })
