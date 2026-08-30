@@ -7,14 +7,15 @@
 foam.CLASS({
   package: 'com.foamdev.cook',
   name: 'IngredientPickerView',
-  extends: 'foam.u2.View',
+  extends: 'foam.u2.view.ReferencePropertyView',
 
   documentation: `Custom property view for an ingredient reference. Its 'data' is the
-    ingredient id (a Long). Improves on the default reference view by letting you
-    create a new ingredient in place — ingredients live in a different DAO — then
-    selecting it, without leaving the form. Configured as the 'view' of
-    IngredientAmount's 'ingredient' property (via the relationship's targetProperty),
-    so every *DetailView renders the ingredient with this picker automatically.`,
+    ingredient id (a Long). Extends the stock ReferencePropertyView — which already
+    renders the reference dropdown (and resolves its DAO from the property) — and only
+    adds the ability to create a new ingredient in place, then select it, without
+    leaving the form. Configured as the 'view' of IngredientAmount's 'ingredient'
+    property (via the relationship's targetProperty), so every *DetailView renders the
+    ingredient with this picker automatically.`,
 
   imports: [
     'ingredientDAO'
@@ -26,8 +27,7 @@ foam.CLASS({
   ],
 
   css: `
-    ^row { display: flex; align-items: center; gap: 8px; }
-    ^select { min-width: 180px; height: 34px; box-sizing: border-box; }
+    ^ { display: inline-flex; align-items: center; gap: 8px; }
     ^popup { display: flex; flex-direction: column; gap: 12px; padding: 24px; min-width: 320px; }
     ^popup-title { font-size: 18px; font-weight: bold; }
     ^popup input, ^popup select { width: 100%; height: 34px; box-sizing: border-box; }
@@ -36,19 +36,6 @@ foam.CLASS({
     ^btn-primary { background: #0066cc; color: white; }
     ^btn-secondary { background: #666; color: white; }
   `,
-
-  properties: [
-    {
-      class: 'Array',
-      name: 'availableIngredients',
-      documentation: 'Cached ingredient list backing the selector.'
-    },
-    {
-      class: 'Int',
-      name: 'ingredientVersion',
-      documentation: 'Bumped after creating an ingredient to refresh the selector.'
-    }
-  ],
 
   actions: [
     {
@@ -60,42 +47,25 @@ foam.CLASS({
   ],
 
   methods: [
-    function init() {
-      this.SUPER();
-      this.loadIngredients();
-    },
-
-    async function loadIngredients() {
-      var sink = await this.ingredientDAO.select();
-      this.availableIngredients = sink.array;
+    function fromProperty(prop) {
+      // Let ReferencePropertyView/ReferenceView wire up the standard reference
+      // selector (choices, selected value, and DAO resolution) from the property.
+      this.SUPER(prop);
     },
 
     function render() {
-      this.SUPER();
       var self = this;
 
-      // data is the ingredient id; dynamic() binds the arg names to this view.
-      this.addClass()
-        .add(this.dynamic(function(data, availableIngredients, ingredientVersion) {
-          var choices = [ [0, '— ingredient —'],
-            ...availableIngredients.map(i => [i.id, i.name]) ];
+      // SUPER renders the stock reference selector (read or write view per mode).
+      this.SUPER();
 
-          this.start().addClass(self.myClass('row'))
-            .start('select').addClass(self.myClass('select'))
-              .on('change', function(ev) { self.data = parseInt(ev.target.value) || 0; })
-              .forEach(choices, function(c) {
-                this.start('option')
-                  .attrs({ value: c[0], selected: c[0] === data })
-                  .add(c[1])
-                .end();
-              })
-            .end()
-            // ...or create one in place (action acts on this view via startContext).
-            .startContext({ data: self })
-              .add(self.NEW_INGREDIENT)
-            .endContext()
-          .end();
-        }));
+      // ...on top of which we add the only bit of custom behaviour: create a new
+      // ingredient in place, but only when the picker is editable.
+      this.callIf(self.mode === foam.u2.DisplayMode.RW, function() {
+        this.startContext({ data: self })
+          .add(self.NEW_INGREDIENT)
+        .endContext();
+      });
     },
 
     function createIngredient() {
@@ -118,9 +88,7 @@ foam.CLASS({
                 var name = (draft.name || '').trim();
                 if ( ! name ) { popup.close(); return; }
                 var saved = await self.ingredientDAO.put(draft);
-                self.data = saved.id;          // select the new ingredient
-                await self.loadIngredients();   // refresh the cached list...
-                self.ingredientVersion++;       // ...and redraw the selector
+                self.data = saved.id;   // select the newly created ingredient
                 popup.close();
               })
             .end()

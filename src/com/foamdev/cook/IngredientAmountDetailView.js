@@ -6,7 +6,7 @@
 
 foam.CLASS({
   package: 'com.foamdev.cook',
-  name: 'IngredientAmountDetailView',
+  name: 'xxxIngredientAmountDetailView',
   extends: 'foam.comics.v3.DetailView',
 
   documentation: `Faceted detail view for IngredientAmount.

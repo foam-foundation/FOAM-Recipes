@@ -45,7 +45,7 @@ foam.CLASS({
       targetDAOKey: 'ingredientAmountDAO',
       value: 0,
       section: 'other',
-      //view: { class: 'com.foamdev.cook.AlternativePickerView' }
+      view: { class: 'com.foamdev.cook.AlternativePickerView' }
     }
   ],
 
