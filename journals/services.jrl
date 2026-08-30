@@ -96,3 +96,18 @@ p({
     }
   """
 })
+
+p({
+  "name": "recipeStepIngredientAmountJunctionDAO",
+  "lazy": true,
+  "serve": true,
+  "description": "DAO responsible for storing the RecipeStep <-> IngredientAmount junction.",
+  "serviceScript": """
+    return new foam.dao.EasyDAO.Builder(x)
+      .setJournalType(foam.dao.JournalType.SINGLE_JOURNAL)
+      .setJournalName("recipeStepIngredientAmountJunction")
+      .setOf(com.foamdev.cook.RecipeStepIngredientAmountJunction.getOwnClassInfo())
+      .build();
+  """,
+  "client": `{"of":"com.foamdev.cook.RecipeStepIngredientAmountJunction"}`
+})
