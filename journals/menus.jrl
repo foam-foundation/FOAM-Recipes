@@ -17,7 +17,7 @@ p({
   "keywords":["create", "new"],
   "handler":{
     "class":"foam.core.menu.ViewMenu",
-    "view":{"class":"com.foamdev.cook.RecipeCreateView"}
+    "view":{"class":"com.foamdev.cook.RecipeCreateView2"}
   }
 })
 

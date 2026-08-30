@@ -19,7 +19,7 @@ foam.POM({
     { name: 'IngredientAmountCreateView', flags: 'js' },
     { name: 'IngredientAmountDetailView', flags: 'js' },
     { name: 'RecipeDetailView',        flags: 'js' },
-    { name: 'RecipeCreateView',        flags: 'js' }
+    { name: 'RecipeCreateView2',        flags: 'js' }
   ],
 
   javaFiles: [

@@ -40,6 +40,11 @@ foam.CLASS({
     {
       class: 'String',
       name: 'description'
+    },
+    {
+      class: 'FObjectArray',
+      of: 'com.foamdev.cook.RecipeStep',
+      name: 'steps'
     }
   ],
 

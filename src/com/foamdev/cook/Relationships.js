@@ -19,13 +19,14 @@ foam.RELATIONSHIP({
   }
 });
 
-foam.RELATIONSHIP({
+
+/* foam.RELATIONSHIP({
   sourceModel: 'com.foamdev.cook.Recipe',
   targetModel: 'com.foamdev.cook.RecipeStep',
   forwardName: 'steps',
   inverseName: 'recipe',
   cardinality: '1:*'
-});
+}); */
 
 foam.RELATIONSHIP({
   sourceModel: 'com.foamdev.cook.RecipeStep',
