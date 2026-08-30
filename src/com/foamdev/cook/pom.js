@@ -17,7 +17,6 @@ foam.POM({
     { name: 'IngredientPickerView',    flags: 'js' },
     { name: 'AlternativePickerView',   flags: 'js' },
     { name: 'IngredientAmountCreateView', flags: 'js' },
-    { name: 'IngredientAmountDetailView', flags: 'js' },
     { name: 'RecipeDetailView',        flags: 'js' },
     { name: 'RecipeCreateView2',        flags: 'js' }
   ],
