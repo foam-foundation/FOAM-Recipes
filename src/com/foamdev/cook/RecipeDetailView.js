@@ -84,15 +84,17 @@ foam.CLASS({
 
   methods: [
     function render() {
+      this.SUPER();
       var self = this;
 
-      // data is loaded asynchronously by DAOSummaryView, so render reactively:
-      // the slot re-runs when data arrives, avoiding a read of this.data before
-      // it's set.
+      // data is loaded asynchronously by DAOSummaryView, so render reactively via
+      // this.dynamic(): it re-runs when data arrives (null-guarded) and binds the
+      // argument name to this view rather than to context.data.
       this.addClass()
-        .add(this.slot(function(data) {
+        .add(this.dynamic(function(data) {
           if ( ! data ) return;
-          return self.E()
+
+          this
             .start().addClass(self.myClass('header'))
               .start('h1').addClass(self.myClass('title')).add(data.name$).end()
               .start().addClass(self.myClass('category')).add(data.category$).end()

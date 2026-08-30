@@ -14,6 +14,10 @@ foam.POM({
     { name: 'RecipeStep',              flags: 'js|java' },
     { name: 'Relationships',           flags: 'js|java' },
     { name: 'ConversionService',       flags: 'js|java' },
+    { name: 'IngredientPickerView',    flags: 'js' },
+    { name: 'AlternativePickerView',   flags: 'js' },
+    { name: 'IngredientAmountCreateView', flags: 'js' },
+    { name: 'IngredientAmountDetailView', flags: 'js' },
     { name: 'RecipeDetailView',        flags: 'js' },
     { name: 'RecipeCreateView',        flags: 'js' }
   ],

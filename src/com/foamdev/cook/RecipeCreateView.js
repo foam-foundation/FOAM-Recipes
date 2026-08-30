@@ -229,6 +229,7 @@ foam.CLASS({
     },
 
     function render() {
+      this.SUPER();
       var self = this;
 
       this.addClass()
@@ -245,15 +246,19 @@ foam.CLASS({
         .start().addClass(this.myClass('section'))
           .start().addClass(this.myClass('section-header'))
             .start().addClass(this.myClass('section-title')).add('Steps').end()
+            /*
             .start('button')
               .addClass(this.myClass('btn'))
               .addClass(self.myClass('btn-secondary'))
               .add('+ Add Step')
               .on('click', () => this.addStep())
             .end()
+            */
+           .add(this.ADD_STEP)
+
           .end()
-          .add(this.slot(function(steps, stepIngredients, ingredientVersion) {
-            return this.E().forEach(steps, function(step, index) {
+          .add(this.dynamic(function(steps, stepIngredients, ingredientVersion) {
+            this.forEach(steps, function(step, index) {
               var ingredients = stepIngredients[index] || [];
               this
                 .start().addClass(self.myClass('step'))
@@ -334,17 +339,6 @@ foam.CLASS({
             .on('click', () => this.saveRecipe())
           .end()
         .end();
-    },
-
-    function addStep() {
-      var step = this.RecipeStep.create({
-        rank: this.steps.length + 1
-      });
-      this.steps = [...this.steps, step];
-      // Initialize empty ingredients array for this step
-      var newMap = Object.assign({}, this.stepIngredients);
-      newMap[this.steps.length - 1] = [];
-      this.stepIngredients = newMap;
     },
 
     function removeStep(index) {
@@ -550,6 +544,20 @@ foam.CLASS({
       // pushMenu_ can't find that id and falls back to the default menu
       // (createRecipe), which is why the screen appeared to stay on create.
       this.routeTo('cookbook.recipe');
+    }
+  ],
+
+  actions: [
+    {
+      name: 'addStep',
+      label: 'Add Step',
+      buttonStyle: 'SECONDARY',
+      code: function() {
+        var newStep = this.RecipeStep.create({
+          rank: this.steps.length + 1
+        });
+        this.steps = [...this.steps, newStep];
+      }
     }
   ]
 });

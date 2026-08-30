@@ -33,13 +33,29 @@ p({
     "class":"foam.core.menu.DAOMenu2",
     "config":{
       "class":"foam.comics.v2.DAOControllerConfig",
-      "daoKey":"recipeDAO",
-      "detailView":{"class":"com.foamdev.cook.RecipeDetailView"}
+      "daoKey":"recipeDAO"
     }
   }
 })
 
 
+
+p({
+  "class":"foam.core.menu.Menu",
+  "id":"cookbook.ingredientAmount",
+  "parent":"cookbook",
+  "label":"Ingredient Amount",
+  "order":2,
+  "authenticate":true,
+  "keywords":[""],
+  "handler":{
+    "class":"foam.core.menu.DAOMenu2",
+    "config":{
+      "class":"foam.comics.v2.DAOControllerConfig",
+      "daoKey":"ingredientAmountDAO"
+    }
+  }
+})
 
 p({
   "class":"foam.core.menu.Menu",
