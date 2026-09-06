@@ -23,19 +23,31 @@ foam.RELATIONSHIP({
   }
 });
 
-
-/* foam.RELATIONSHIP({
+foam.RELATIONSHIP({
   sourceModel: 'com.foamdev.cook.Recipe',
   targetModel: 'com.foamdev.cook.RecipeStep',
   forwardName: 'steps',
   inverseName: 'recipe',
-  cardinality: '1:*'
-}); */
+  cardinality: '1:*',
+  targetProperty: {
+    hidden: true
+  }
+});
 
 foam.RELATIONSHIP({
   sourceModel: 'com.foamdev.cook.RecipeStep',
   targetModel: 'com.foamdev.cook.IngredientAmount',
   forwardName: 'ingredientAmounts',
   inverseName: 'recipeSteps',
-  cardinality: '*:*'
+  cardinality: '*:*',
+  // Render the step's 'ingredientAmounts' with a custom view: a plain table of the
+  // amounts on this step plus a button to create a new IngredientAmount in place (no
+  // cross-usage table / add-existing chrome). Shown on create too (createVisibility
+  // 'RW' — the *:* property is HIDDEN on create by default): the view persists the
+  // step on first add so the junction has a real source id.
+  sourceProperty: {
+    label: 'Ingredients',
+    view: { class: 'com.foamdev.cook.RecipeStepIngredientAmountsView' },
+    createVisibility: 'RW'
+  }
 });

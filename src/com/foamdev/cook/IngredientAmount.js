@@ -46,6 +46,17 @@ foam.CLASS({
       value: 0,
       section: 'other',
       view: { class: 'com.foamdev.cook.AlternativePickerView' }
+    },
+    {
+      // In-memory, human-readable label (ingredient + amount + unit). Transient, so
+      // it is never persisted or sent over the wire — it can't be, since it derives
+      // from the *referenced* Ingredient. Pickers populate it client-side (from
+      // toSummary) so their search can match on the readable summary rather than only
+      // on IngredientAmount's own stored fields (which don't include the name).
+      class: 'String',
+      name: 'summary',
+      transient: true,
+      hidden: true
     }
   ],
 
