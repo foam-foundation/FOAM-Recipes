@@ -48,15 +48,26 @@ foam.CLASS({
       view: { class: 'com.foamdev.cook.AlternativePickerView' }
     },
     {
-      // In-memory, human-readable label (ingredient + amount + unit). Transient, so
-      // it is never persisted or sent over the wire — it can't be, since it derives
-      // from the *referenced* Ingredient. Pickers populate it client-side (from
-      // toSummary) so their search can match on the readable summary rather than only
-      // on IngredientAmount's own stored fields (which don't include the name).
+      // In-memory, human-readable label (ingredient name + amount + unit). Transient —
+      // never persisted or sent over the wire — because it derives from the *referenced*
+      // Ingredient. It's a self-populating expression: resolving the ingredient is async,
+      // so we return '' immediately and set the real value once toSummary() resolves (the
+      // same pattern comics DetailView uses for viewTitle). Views can then bind summary$
+      // for a reactive label, and a client-side (in-memory) DAO can be searched by SUMMARY
+      // — which the server can't do, since the field is transient and derived.
       class: 'String',
       name: 'summary',
       transient: true,
-      hidden: true
+      hidden: true,
+      expression: function(ingredient, amount, unit) {
+        // No ingredient yet -> nothing to summarize (and toSummary would throw on the
+        // null reference). 'summary' isn't one of this expression's dependencies, so
+        // setting it in the callback doesn't re-trigger the expression.
+        if ( ! ingredient ) return '';
+        var self = this;
+        this.toSummary().then(v => { self.summary = v; });
+        return '';
+      }
     }
   ],
 

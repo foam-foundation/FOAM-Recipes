@@ -40,14 +40,18 @@ foam.RELATIONSHIP({
   forwardName: 'ingredientAmounts',
   inverseName: 'recipeSteps',
   cardinality: '*:*',
-  // Render the step's 'ingredientAmounts' with a custom view: a plain table of the
-  // amounts on this step plus a button to create a new IngredientAmount in place (no
-  // cross-usage table / add-existing chrome). Shown on create too (createVisibility
-  // 'RW' — the *:* property is HIDDEN on create by default): the view persists the
-  // step on first add so the junction has a real source id.
+  // Render the step's 'ingredientAmounts' with a custom view that lists the linked
+  // amounts and lets you view/edit/remove/create them in place. Visibility is set
+  // explicitly for all three modes: the list shows everywhere (RO in read mode), and
+  // is editable on create and update. We must opt into 'RW' on create because a *:*
+  // property is HIDDEN on create by default (no source id yet to hang a junction on) —
+  // the view works around that by persisting the step on first add so the junction has
+  // a real source id.
   sourceProperty: {
     label: 'Ingredients',
     view: { class: 'com.foamdev.cook.RecipeStepIngredientAmountsView' },
-    createVisibility: 'RW'
+    createVisibility: 'RW',
+    updateVisibility: 'RW',
+    readVisibility: 'RO'
   }
 });

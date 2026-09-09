@@ -11,7 +11,10 @@ foam.CLASS({
     },
     {
       class: 'Int',
-      name: 'rank'
+      name: 'rank',
+      // Ordering is assigned by the create screen (and would be by drag-reorder in a
+      // richer UI), not typed in by hand — so keep it out of the generated forms.
+      hidden: true
     },
     {
       class: 'String',
