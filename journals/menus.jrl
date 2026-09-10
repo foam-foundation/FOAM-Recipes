@@ -34,7 +34,8 @@ p({
     "config":{
       "class":"foam.comics.v2.DAOControllerConfig",
       "daoKey":"recipeDAO",
-      "detailView":{"class":"com.foamdev.cook.RecipeView"}
+      "detailView":{"class":"com.foamdev.cook.RecipeView"},
+      "createView":{"class":"com.foamdev.cook.RecipeView"}
     }
   }
 })

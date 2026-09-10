@@ -9,306 +9,125 @@ foam.CLASS({
   name: 'RecipeView',
   extends: 'foam.u2.View',
 
-  documentation: `Custom detail view for Recipe, wired explicitly as the recipe menu's
-    config.detailView (NOT named '...DetailView', to stay clear of the comics
-    name-based facet, which would otherwise substitute this class in as the detail
-    controller and never hand it data).
+  documentation: `Custom detail form for Recipe, wired as the recipe menu's
+    config.detailView. It renders ONLY the recipe's own fields and then each RecipeStep
+    with the out-of-the-box RecipeStep detail view — which is already mode-aware (RO in
+    VIEW, RW in EDIT) and already wires the *:* 'ingredientAmounts' to the custom
+    RecipeStepIngredientAmountsView picker. Nothing about the step form is re-implemented
+    here; RecipeSteps only make sense inside a Recipe, so this is where that prep work
+    gets composed in.
 
-    It does NOT own its own edit lifecycle — the comics DetailView controller does.
-    We react to the controller's 'controllerMode' (VIEW / EDIT) to switch between a
-    read-only summary and editable forms, and let the controller's Edit/Save/Cancel
-    drive it. The recipe's own fields are saved by the controller (it puts the working
-    copy); its steps are separate RecipeStep records, so we persist those by riding the
-    controller's 'finished' event, which fires only on a successful save.
-
-    Steps render as out-of-the-box RecipeStep forms (VerticalDetailView) whose
-    'ingredientAmounts' relationship uses RecipeStepIngredientAmountsView. Because the
-    recipe already exists, new steps are linked to it immediately; removing a step
-    deletes it and its *:* junction rows (the IngredientAmounts are kept — reusable).`,
+    Steps are staged on the recipe's transient 'editSteps' (the same working-clone object
+    the recipe's 'save' ComicsAction reads), so field edits and new steps commit with the
+    recipe. Removing a step deletes it and its junctions immediately (IngredientAmounts
+    are reusable, so they're kept).`,
 
   requires: [
     'com.foamdev.cook.Recipe',
     'com.foamdev.cook.RecipeStep'
   ],
 
-  imports: [
-    'recipeStepDAO',
-    'ingredientDAO',
-    'detailView?'
-  ],
-
   css: `
-    ^ {
-      padding: 16px;
-      font-family: sans-serif;
-    }
-    ^header {
-      border-bottom: 2px solid #333;
-      padding-bottom: 12px;
-      margin-bottom: 16px;
-    }
-    ^category {
-      color: #666;
-      font-style: italic;
-    }
-    ^description {
-      margin-top: 12px;
-      color: #444;
-    }
-    ^section {
-      margin-top: 24px;
-    }
-    ^section-header {
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 4px;
-      margin-bottom: 12px;
-    }
-    ^section-title {
-      font-size: 18px;
-      font-weight: bold;
-    }
-    ^step {
-      margin-bottom: 16px;
-      padding: 12px;
-      background: #f9f9f9;
-      border-radius: 4px;
-    }
-    ^step-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    ^step-rank {
-      font-weight: bold;
-      color: #333;
-    }
-    ^step-category {
-      font-size: 12px;
-      color: #888;
-      margin-left: 8px;
-    }
-    ^step-instruction {
-      margin-top: 8px;
-    }
-    ^step-prep {
-      font-size: 12px;
-      color: #0066cc;
-      margin-left: 8px;
-    }
-    ^ingredients {
-      margin-top: 8px;
-      padding-left: 16px;
-    }
-    ^ingredient {
-      margin: 4px 0;
-      color: #555;
-    }
-    ^btn {
-      padding: 6px 14px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    ^btn-secondary {
-      background: #666;
-      color: white;
-    }
-    ^btn-danger {
-      background: #cc0000;
-      color: white;
-    }
+    ^ { padding: 16px; font-family: sans-serif; }
+    ^section { margin-top: 24px; }
+    ^section-title { font-size: 18px; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 12px; }
+    ^step { margin-bottom: 16px; padding: 12px; background: #f9f9f9; border-radius: 4px; }
+    ^step-header { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    ^btn { padding: 6px 14px; border: none; border-radius: 4px; cursor: pointer; }
+    ^btn-secondary { background: #666; color: white; }
+    ^btn-danger { background: #cc0000; color: white; }
   `,
-
-  properties: [
-    {
-      class: 'Array',
-      name: 'editSteps',
-      documentation: 'Working copy of the recipe\'s steps while in edit mode.'
-    }
-  ],
 
   methods: [
     function init() {
       this.SUPER();
-      var self = this;
 
-      // foam.u2.Element already declares 'controllerMode' (a one-time factory snapshot
-      // of the context's value), so we can't import it — and the snapshot wouldn't track
-      // the controller's VIEW <-> EDIT toggle anyway. Follow the controller's slot so our
-      // property (and the reactive render below) stays in sync, the same way SectionView does.
+      // Element already declares controllerMode; follow the controller's slot to track
+      // VIEW <-> EDIT (like SectionView).
       if ( this.__context__.controllerMode$ ) {
         this.controllerMode$.follow(this.__context__.controllerMode$);
       }
 
-      // When the controller switches to EDIT, load a fresh working copy of the steps.
-      this.onDetach(this.controllerMode$.sub(function() {
-        if ( self.controllerMode == 'EDIT' ) self.loadEditSteps();
-      }));
-
-      // The controller's Save persists only the recipe object, then pubs 'finished'.
-      // Ride that to persist our separate RecipeStep records. Cancel doesn't fire
-      // 'finished', so step edits are simply dropped on cancel.
-      if ( this.detailView ) {
-        this.onDetach(this.detailView.finished.sub(this.saveSteps));
-      }
+      // Keep the working step list in sync with the record. workingData is a fresh clone
+      // on edit (and its transient editSteps starts empty), so reload on any data change.
+      this.onDetach(this.data$.sub(() => this.loadSteps()));
+      this.loadSteps();
     },
 
-    async function loadEditSteps() {
+    async function loadSteps() {
+      if ( ! this.data ) return;
+      // A brand-new (create-mode) recipe has no id; don't query steps by a null id (it
+      // could surface orphaned steps). Start empty.
+      if ( ! this.data.id ) { this.data.editSteps = []; this.data.loadedStepIds = []; return; }
       var sink = await this.data.steps.orderBy(this.RecipeStep.RANK).select();
-      this.editSteps = sink.array;
+      this.data.editSteps     = sink.array;
+      // Remember which steps pre-existed, so edit-Cancel only cleans up ones added now.
+      this.data.loadedStepIds = sink.array.map(s => s.id);
     },
 
     function render() {
       this.SUPER();
       var self = this;
 
-      // Re-render on data load and on the controller's mode changes.
       this.addClass()
         .add(this.dynamic(function(data, controllerMode) {
           if ( ! data ) return;
-          var editing = controllerMode == 'EDIT';
+          var editing = controllerMode == 'EDIT' || controllerMode == 'CREATE';
 
-          this
-            .start().addClass(self.myClass('header'))
-              // Read mode: formatted display (the controller titles the panel with the
-              // record's name, so we don't repeat it). Edit mode: the recipe's fields.
-              .callIf( ! editing, function() {
-                this
-                  .start().addClass(self.myClass('category'))
-                    .add(data.category$.map(c => c ? c.label : ''))
-                  .end()
-                  .start().addClass(self.myClass('description')).add(data.description$).end();
-              })
-              .callIf( editing, function() {
-                this.startContext({ data: data })
-                  .add(self.Recipe.NAME.__)
-                  .add(self.Recipe.CATEGORY.__)
-                  .add(self.Recipe.DESCRIPTION.__)
-                .endContext();
-              })
-            .end()
+          // Recipe's own fields — PropertyBorders are mode-aware on their own.
+          this.startContext({ data: data })
+            .add(self.Recipe.NAME.__)
+            .add(self.Recipe.CATEGORY.__)
+            .add(self.Recipe.DESCRIPTION.__)
+          .endContext();
 
-            // Steps Section
-            .start().addClass(self.myClass('section'))
-              .start().addClass(self.myClass('section-header'))
-                .start().addClass(self.myClass('section-title')).add('Steps').end()
-              .end()
-
-              // Read mode: formatted, read-only summary of each step.
-              .callIf( ! editing, function() {
-                this.select(data.steps, function(step) {
-                  this
-                    .start().addClass(self.myClass('step'))
-                      .start('span').addClass(self.myClass('step-rank'))
-                        .add('Step ', step.rank)
-                      .end()
-                      .callIf(step.category, function() {
-                        this.start('span').addClass(self.myClass('step-category'))
-                          .add('(', step.category.label, ')')
-                        .end();
-                      })
-                      .callIf(step.isPrep, function() {
-                        this.start('span').addClass(self.myClass('step-prep'))
-                          .add('[Prep]')
-                        .end();
-                      })
-                      .start().addClass(self.myClass('step-instruction'))
-                        .add(step.instruction)
-                      .end()
-                      // Ingredients for this step (*:* relationship — iterate its .dao)
-                      .start().addClass(self.myClass('ingredients'))
-                        .select(step.ingredientAmounts.dao, function(ia) {
-                          this.start().addClass(self.myClass('ingredient'))
-                            .add(ia.amount, ' ', ia.unit?.label, ' ')
-                            .call(async function() {
-                              var ingredient = await self.ingredientDAO.find(ia.ingredient);
-                              if ( ingredient ) this.add(ingredient.name);
-                            })
-                          .end();
-                        })
+          // Steps — each via the DEFAULT RecipeStep view (mode-aware; already wires the
+          // ingredientAmounts picker). Add/Remove only when editing.
+          this.start().addClass(self.myClass('section'))
+            .start().addClass(self.myClass('section-title')).add('Steps').end()
+            .callIf(editing, function() {
+              this.start('button')
+                .addClass(self.myClass('btn')).addClass(self.myClass('btn-secondary'))
+                .add('Add Step')
+                .on('click', () => self.addStep())
+              .end();
+            })
+            .add(self.slot(function(editSteps) {
+              var e = self.E();
+              ( editSteps || [] ).forEach(function(step) {
+                e.start().addClass(self.myClass('step'))
+                  .callIf(editing, function() {
+                    this.start().addClass(self.myClass('step-header'))
+                      .start('button')
+                        .addClass(self.myClass('btn')).addClass(self.myClass('btn-danger'))
+                        .add('Remove')
+                        .on('click', () => self.removeStep(step))
                       .end()
                     .end();
-                });
-              })
-
-              // Edit mode: each step in an out-of-the-box editable form, plus add/remove.
-              .callIf( editing, function() {
-                this.start('button')
-                  .addClass(self.myClass('btn')).addClass(self.myClass('btn-secondary'))
-                  .add('Add Step')
-                  .on('click', () => self.addStep())
-                .end()
-                .add(self.dynamic(function(editSteps) {
-                  this.forEach(editSteps, function(step, index) {
-                    this
-                      .start().addClass(self.myClass('step'))
-                        .start().addClass(self.myClass('step-header'))
-                          .start('strong').add('Step ', index + 1).end()
-                          .start('button')
-                            .addClass(self.myClass('btn')).addClass(self.myClass('btn-danger'))
-                            .add('Remove')
-                            .on('click', () => self.removeStep(index))
-                          .end()
-                        .end()
-                        .tag({
-                          class: 'foam.u2.detail.VerticalDetailView',
-                          data: step
-                        })
-                      .end();
-                  });
-                }));
-              })
-            .end();
+                  })
+                  .tag({ class: 'foam.u2.detail.SectionedDetailView', data: step })
+                .end();
+              });
+              return e;
+            }, data.editSteps$))
+          .end();
         }));
     },
 
     function addStep() {
-      // The recipe already exists, so link the step to it right away — no orphan
-      // window. Created in this view's context so its relationship DAOs resolve.
+      // The recipe already exists (edit mode), so link the step to it right away.
       var step = this.RecipeStep.create({
         recipe: this.data.id,
-        rank: this.editSteps.length + 1
+        rank: this.data.editSteps.length + 1
       }, this);
-      this.editSteps = [...this.editSteps, step];
+      this.data.editSteps = [ ...this.data.editSteps, step ];
     },
 
-    async function removeStep(index) {
-      var step = this.editSteps[index];
-
-      var arr = [...this.editSteps];
-      arr.splice(index, 1);
+    async function removeStep(step) {
+      var arr = this.data.editSteps.filter(s => s !== step);
       arr.forEach((s, i) => s.rank = i + 1);
-      this.editSteps = arr;
-
-      await this.deleteStep(step);
-    },
-
-    // Delete a persisted step and the *:* junction rows tying it to its ingredient
-    // amounts. The IngredientAmounts themselves are kept — they're reusable.
-    async function deleteStep(step) {
-      if ( ! step || ! step.id ) return;
-
-      var sink = await step.ingredientAmounts.dao.select();
-      for ( var i = 0; i < sink.array.length; i++ ) {
-        await step.ingredientAmounts.remove(sink.array[i]);   // removes the junction only
-      }
-
-      await this.recipeStepDAO.remove(step);
-    }
-  ],
-
-  listeners: [
-    async function saveSteps() {
-      // Fired on the controller's 'finished' (i.e. after a successful Save). Persist
-      // step field edits and any newly added steps, re-ranked in list order. Each
-      // step already carries its 'recipe' reference (loaded steps have it; added ones
-      // set it on creation), so this doesn't depend on this.data mid-reload.
-      for ( var i = 0; i < this.editSteps.length; i++ ) {
-        var step = this.editSteps[i];
-        step.rank = i + 1;
-        await this.recipeStepDAO.put(step);
-      }
+      this.data.editSteps = arr;
+      if ( step.id ) await step.removeWithJunctions(this.__context__);
     }
   ]
 });
