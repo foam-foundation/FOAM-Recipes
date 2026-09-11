@@ -7,26 +7,13 @@ p({
   "border":{"class":"foam.u2.borders.NullBorder"}
 })
 
-p({
-  "class":"foam.core.menu.Menu",
-  "id":"cookbook.createRecipe",
-  "parent":"cookbook",
-  "label":"Create Recipe",
-  "order":0,
-  "authenticate":true,
-  "keywords":["create", "new"],
-  "handler":{
-    "class":"foam.core.menu.ViewMenu",
-    "view":{"class":"com.foamdev.cook.RecipeCreateView3"}
-  }
-})
 
 p({
   "class":"foam.core.menu.Menu",
   "id":"cookbook.recipe",
   "parent":"cookbook",
-  "label":"Recipe",
-  "order":1,
+  "label":"Recipes",
+  "order":0,
   "authenticate":true,
   "keywords":[""],
   "handler":{
@@ -39,15 +26,27 @@ p({
     }
   }
 })
-
+p({
+  "class":"foam.core.menu.Menu",
+  "id":"cookbook.createRecipe",
+  "parent":"cookbook",
+  "label":"Fully Custom Create",
+  "order":2,
+  "authenticate":true,
+  "keywords":["create", "new"],
+  "handler":{
+    "class":"foam.core.menu.ViewMenu",
+    "view":{"class":"com.foamdev.cook.RecipeCreateView2"}
+  }
+})
 
 
 p({
   "class":"foam.core.menu.Menu",
   "id":"cookbook.ingredientAmount",
   "parent":"cookbook",
-  "label":"Ingredient Amount",
-  "order":2,
+  "label":"Ingredients",
+  "order":1,
   "authenticate":true,
   "keywords":[""],
   "handler":{
@@ -63,21 +62,6 @@ p({
   }
 })
 
-p({
-  "class":"foam.core.menu.Menu",
-  "id":"cookbook.ingredient",
-  "parent":"cookbook",
-  "label":"Ingredient",
-  "order":3,
-  "authenticate":true,
-  "keywords":[""],
-  "handler":{
-    "class":"foam.core.menu.DAOMenu2",
-    "config":{
-      "class":"foam.comics.v2.DAOControllerConfig",
-      "daoKey":"ingredientDAO"
-    }
-  }
-})
+
 
 

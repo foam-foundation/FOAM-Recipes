@@ -74,12 +74,15 @@ foam.CLASS({
           if ( ! data ) return;
           var editing = controllerMode == 'EDIT' || controllerMode == 'CREATE';
 
-          // Recipe's own fields — PropertyBorders are mode-aware on their own.
-          this.startContext({ data: data })
-            .add(self.Recipe.NAME.__)
-            .add(self.Recipe.CATEGORY.__)
-            .add(self.Recipe.DESCRIPTION.__)
-          .endContext();
+          // Recipe's own fields via the standard SectionedDetailView (consistent styling).
+          // Whitelist excludes the 'steps' relationship (rendered as cards below);
+          // hideActions keeps the recipe's comics actions out of the form.
+          this.tag({
+            class: 'foam.u2.detail.SectionedDetailView',
+            data: data,
+            propertyWhitelist: [ self.Recipe.NAME, self.Recipe.CATEGORY, self.Recipe.DESCRIPTION ],
+            hideActions: true
+          });
 
           // Steps — each via the DEFAULT RecipeStep view (mode-aware; already wires the
           // ingredientAmounts picker). Add/Remove only when editing.
