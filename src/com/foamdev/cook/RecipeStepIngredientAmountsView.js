@@ -23,13 +23,10 @@ foam.CLASS({
       - Attach (RW)  -> a searchable dropdown to link an EXISTING amount to this step.
       - New (RW)     -> creates a brand-new IngredientAmount in place and links it.
 
-    Searchable dropdown: an IngredientAmount's label (summary) derives from the
-    *referenced* Ingredient, so it isn't a stored field and a server-backed DAO can't
-    match on it. We point a RichChoiceView at a client-side (in-memory) DAO with
-    searchBy: [ IngredientAmount.SUMMARY ], so typing filters on the readable summary in
-    memory. That DAO is built once per session and shared via IngredientAmountSearch (not
-    rebuilt per open); we keep it current with IngredientAmountSearch.refresh() after a
-    create/edit. The summary itself is a self-populating expression on IngredientAmount.
+    The searchable dropdown points RichChoiceView at the client-cached ingredientAmountDAO
+    with searchBy: [ IngredientAmount.SUMMARY ]. Because the DAO is client-side cached,
+    the CONTAINS_IC predicate runs in memory against the local MDAO — no server round-trip,
+    and summary resolves from the transient factory on each record.
 
     The *:* junction stores the step's id, so amounts can only be linked once the step
     is persisted. We reach the step via the detail view's exported 'objData' and, for a
@@ -53,11 +50,6 @@ foam.CLASS({
   ],
 
   properties: [
-    {
-      // Client-side, in-memory copy of the ingredient amounts with 'summary'
-      // populated, so the dropdown can search on the readable label instead of a meaningless id.
-      name: 'searchDAO'
-    },
     {
       class: 'Int',
       name: 'selectedAmountId',
@@ -105,14 +97,6 @@ foam.CLASS({
   ],
 
   methods: [
-    function init() {
-      this.SUPER();
-      var self = this;
-      // Grab the shared, session-cached search DAO (built once across all pickers).
-      com.foamdev.cook.IngredientAmountSearch.dao(this.__context__)
-        .then(d => { self.searchDAO = d; });
-    },
-
     function render() {
       this.SUPER();
       var self = this;
@@ -166,15 +150,12 @@ foam.CLASS({
         .callIf(this.mode === DisplayMode.RW, function() {
           this.start('div').addClass(self.myClass('add-row'))
             .startContext({ data: self })
-              .add(self.slot(function(searchDAO) {
-                if ( ! searchDAO ) return self.E();
-                return self.E().tag(self.RichChoiceView, {
-                  search: true,
-                  searchPlaceholder: 'Search ingredient amounts',
-                  sections: [ { dao: searchDAO, searchBy: [ self.IngredientAmount.SUMMARY ] } ],
-                  data$: self.selectedAmountId$
-                });
-              }, self.searchDAO$))
+              .tag(self.RichChoiceView, {
+                search: true,
+                searchPlaceholder: 'Search ingredient amounts',
+                sections: [ { dao: self.ingredientAmountDAO, searchBy: [ self.IngredientAmount.SUMMARY ] } ],
+                data$: self.selectedAmountId$
+              })
               .add(self.NEW_INGREDIENT_AMOUNT)
             .endContext()
           .end();
@@ -213,8 +194,6 @@ foam.CLASS({
                   if ( obj.errors_ ) return;   // amount > 0 + ingredient required
                   await self.ingredientAmountDAO.put(obj);
                   self.invalidate++;           // refresh the row label
-                  // keep the shared search cache in sync with the edited summary
-                  com.foamdev.cook.IngredientAmountSearch.refresh(self.__context__, obj);
                   popup.close();
                 })
               .end();
@@ -302,8 +281,6 @@ foam.CLASS({
                 // add() creates the junction row linking the amount to this step.
                 await step.ingredientAmounts.add(savedIA);
                 self.invalidate++;      // re-render the list
-                // make the new amount searchable via the shared search cache
-                com.foamdev.cook.IngredientAmountSearch.refresh(self.__context__, savedIA);
                 popup.close();
               })
             .end()

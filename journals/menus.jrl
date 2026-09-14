@@ -54,10 +54,7 @@ p({
     "config":{
       "class":"foam.comics.v2.DAOControllerConfig",
       "daoKey":"ingredientAmountDAO",
-      "createView":{
-        "class":"foam.u2.view.FObjectView",
-        "detailView":{"class":"foam.u2.detail.TabbedDetailView"}
-      }
+      "createView":{"class":"foam.u2.detail.TabbedDetailView"}
     }
   }
 })

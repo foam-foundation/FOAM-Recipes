@@ -12,6 +12,7 @@ foam.RELATIONSHIP({
     section: 'main',
     gridColumns: 4,
     required: true,
+    enableLink: false,
     view: { class: 'com.foamdev.cook.IngredientPickerView' },
     tableCellFormatter: async function() {
       let ingredient = await this.data.ingredient$find;
