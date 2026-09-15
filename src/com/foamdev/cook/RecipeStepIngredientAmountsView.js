@@ -180,9 +180,8 @@ foam.CLASS({
             controllerMode: editing ? this.ControllerMode.EDIT : this.ControllerMode.VIEW
           })
             .tag({
-              class: 'foam.u2.detail.VerticalDetailView',
-              data: obj,
-              useSections: [ 'main' ]
+              class: 'foam.u2.detail.TabbedDetailView',
+              data: obj
             })
           .endContext()
           .start().addClass(this.myClass('popup-actions'))
