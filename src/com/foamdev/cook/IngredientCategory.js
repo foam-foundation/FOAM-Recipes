@@ -8,6 +8,8 @@ foam.ENUM({
     { name: 'PORK' },
     { name: 'SUGAR' },
     { name: 'GRAIN' },
-    { name: 'SEASONING' }
+    { name: 'SEASONING' },
+    { name: 'DAIRY' },
+    { name: 'EGGS' }
   ]
 })

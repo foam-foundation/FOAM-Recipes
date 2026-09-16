@@ -246,16 +246,7 @@ foam.CLASS({
         .start().addClass(this.myClass('section'))
           .start().addClass(this.myClass('section-header'))
             .start().addClass(this.myClass('section-title')).add('Steps').end()
-            /*
-            .start('button')
-              .addClass(this.myClass('btn'))
-              .addClass(self.myClass('btn-secondary'))
-              .add('+ Add Step')
-              .on('click', () => this.addStep())
-            .end()
-            */
-           .add(this.ADD_STEP)
-
+            .add(this.ADD_STEP)
           .end()
           .add(this.dynamic(function(steps, stepIngredients, ingredientVersion) {
             this.forEach(steps, function(step, index) {

@@ -10,6 +10,8 @@ foam.ENUM({
     { name: 'KILOGRAM' },
     { name: 'LITER' },
     { name: 'POUND' },
-    { name: 'OUNCE' }
+    { name: 'OUNCE' },
+    { name: 'PIECE' },
+    { name: 'PINCH' }
   ]
 })
