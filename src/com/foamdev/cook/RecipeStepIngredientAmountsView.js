@@ -37,7 +37,6 @@ foam.CLASS({
 
   requires: [
     'com.foamdev.cook.IngredientAmount',
-    'foam.log.LogLevel',
     'foam.u2.ControllerMode',
     'foam.u2.dialog.Popup',
     'foam.u2.view.RichChoiceView'
@@ -45,30 +44,29 @@ foam.CLASS({
 
   imports: [
     'ingredientAmountDAO',
-    'recipeStepDAO',
-    'notify'
+    'recipeStepDAO'
   ],
 
   properties: [
     {
       class: 'Int',
-      name: 'selectedAmountId',
+      name: 'selectedId',
       documentation: 'Scratch selection for the attach dropdown; reset to 0 after use.'
     },
     {
-      class: 'Int',
+      class: 'Boolean',
       name: 'invalidate',
-      // Hand-rolled slot dependency: bump it to re-render the list. Add/remove mutate the
+      // Hand-rolled slot dependency: toggled to re-render the list. Add/remove mutate the
       // *:* junctionDAO, but we render the relationship's target DAO, which never sees
       // that change — so there's no DAO event to bind to. Alternative: subscribe to
       // step.ingredientAmounts.junctionDAO.on and rebuild; we signal ourselves instead
       // since this view owns every mutation.
-      documentation: 'Bumped after add/remove/edit to re-render the list.'
+      documentation: 'Toggled after add/remove/edit to re-render the list.'
     }
   ],
 
   css: `
-    ^ { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+    ^ { display: flex; flex-direction: column; gap: 8px; align-items: stretch; background: #ffe0b2; }
     ^empty { color: #888; font-style: italic; }
     ^row {
       display: flex; align-items: center; justify-content: space-between;
@@ -102,28 +100,27 @@ foam.CLASS({
       var self = this;
       var DisplayMode = foam.u2.DisplayMode;
 
-      // Attach an existing amount as soon as one is picked from the dropdown, then
+      // Attach the selection as soon as one is picked from the dropdown, then
       // reset the dropdown (which re-fires this listener with 0 — guarded below).
-      this.onDetach(this.selectedAmountId$.sub(function() {
-        if ( self.selectedAmountId ) self.attachExisting(self.selectedAmountId);
-      }));
+      this.selectedId$.sub(() => (self.selectedId != 0) && self.attachExisting(self.selectedId));
 
       this.addClass()
-        // The list re-renders whenever 'invalidate' changes (add / remove / edit).
-        .add(this.slot(function(invalidate) {
+        // dynamic() re-runs whenever 'invalidate' changes (add / remove / edit).
+        .add(this.dynamic(function(invalidate) {
+          self.invalidate = false;   // mark as rendered
           var step = self.__context__.objData;
-          var e = self.E();
 
           // A *:* needs the step's id to scope its junction, so only list rows once the
-          // step exists. A fresh step has no amounts anyway, and querying at id 0 would
+          // step exists. A fresh step has no id yet anyway, and querying at id 0 would
           // surface unrelated rows.
           if ( ! step || ! step.id ) {
-            return e.start().addClass(self.myClass('empty'))
+            this.start().addClass(self.myClass('empty'))
               .add('No ingredient amounts yet.')
             .end();
+            return;
           }
 
-          e.select(step.ingredientAmounts.dao, function(ia) {
+          this.select(step.ingredientAmounts.dao, function(ia) {
             this.start().addClass(self.myClass('row'))
               .on('click', () => self.openDetails(ia))
               .start().addClass(self.myClass('row-label'))
@@ -143,8 +140,7 @@ foam.CLASS({
               })
             .end();
           });
-          return e;
-        }, self.invalidate$))
+        }))
 
         // Attach existing (searchable dropdown) or create a new one in place — RW only.
         .callIf(this.mode === DisplayMode.RW, function() {
@@ -154,7 +150,7 @@ foam.CLASS({
                 search: true,
                 searchPlaceholder: 'Search ingredient amounts',
                 sections: [ { dao: self.ingredientAmountDAO, searchBy: [ self.IngredientAmount.SUMMARY ] } ],
-                data$: self.selectedAmountId$
+                data$: self.selectedId$
               })
               .add(self.NEW_INGREDIENT_AMOUNT)
             .endContext()
@@ -192,7 +188,7 @@ foam.CLASS({
                 .on('click', async function() {
                   if ( obj.errors_ ) return;   // amount > 0 + ingredient required
                   await self.ingredientAmountDAO.put(obj);
-                  self.invalidate++;           // refresh the row label
+                  self.invalidate = true;           // refresh the row label
                   popup.close();
                 })
               .end();
@@ -210,29 +206,23 @@ foam.CLASS({
 
     async function attachExisting(id) {
       var step = this.__context__.objData;
-      if ( ! step ) {
-        this.notify('Could not resolve the recipe step.', '', this.LogLevel.ERROR);
-        return;
-      }
+      if ( ! step ) throw new Error('RecipeStepIngredientAmountsView: objData not in context');
       var ia = await this.ingredientAmountDAO.find(id);
-      this.selectedAmountId = 0;   // reset the dropdown for the next pick
+      this.selectedId = 0;   // reset the dropdown for the next pick
       if ( ! ia ) return;
 
       await this.ensureStepSaved(step);
       await step.ingredientAmounts.add(ia);   // create the junction row
-      this.invalidate++;
+      this.invalidate = true;
     },
 
     async function removeAmount(ia) {
       var step = this.__context__.objData;
-      if ( ! step ) {
-        this.notify('Could not resolve the recipe step.', '', this.LogLevel.ERROR);
-        return;
-      }
+      if ( ! step ) throw new Error('RecipeStepIngredientAmountsView: objData not in context');
       // Deletes the *:* junction row only — the IngredientAmount is left intact so it
       // can still be used by other steps.
       await step.ingredientAmounts.remove(ia);
-      this.invalidate++;
+      this.invalidate = true;
     },
 
     // Persist the step if it hasn't been yet, adopting the assigned id in place so the
@@ -249,10 +239,7 @@ foam.CLASS({
     function createIngredientAmount() {
       var self = this;
       var step = this.__context__.objData;
-      if ( ! step ) {
-        this.notify('Could not resolve the recipe step.', '', this.LogLevel.ERROR);
-        return;
-      }
+      if ( ! step ) throw new Error('RecipeStepIngredientAmountsView: objData not in context');
 
       var draft = this.IngredientAmount.create({}, this);
       var popup = this.Popup.create({}, this);
@@ -279,7 +266,7 @@ foam.CLASS({
                 await self.ensureStepSaved(step);
                 // add() creates the junction row linking the amount to this step.
                 await step.ingredientAmounts.add(savedIA);
-                self.invalidate++;      // re-render the list
+                self.invalidate = true;      // re-render the list
                 popup.close();
               })
             .end()

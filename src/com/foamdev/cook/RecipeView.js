@@ -42,23 +42,24 @@ foam.CLASS({
     function init() {
       this.SUPER();
 
-      // Element already declares controllerMode; follow the controller's slot to track
-      // VIEW <-> EDIT (like SectionView).
+      // Follow the Comics shell's controllerMode (VIEW <-> EDIT).
       if ( this.__context__.controllerMode$ ) {
         this.controllerMode$.follow(this.__context__.controllerMode$);
       }
 
-      // Keep the working step list in sync with the record. workingData is a fresh clone
-      // on edit (and its transient editSteps starts empty), so reload on any data change.
-      this.onDetach(this.data$.sub(() => this.loadSteps()));
+      // Comics swaps data for a fresh clone on edit; reload steps whenever data changes.
+      this.data$.sub(() => this.loadSteps());
       this.loadSteps();
     },
 
     async function loadSteps() {
       if ( ! this.data ) return;
-      // A brand-new (create-mode) recipe has no id; don't query steps by a null id (it
-      // could surface orphaned steps). Start empty.
-      if ( ! this.data.id ) { this.data.editSteps = []; this.data.loadedStepIds = []; return; }
+      // No id means create mode, record is not created yet — start with an empty step list.
+      if ( ! this.data.id ) {
+        this.data.editSteps = [];
+        this.data.loadedStepIds = [];
+        return;
+      }
       var sink = await this.data.steps.orderBy(this.RecipeStep.RANK).select();
       this.data.editSteps     = sink.array;
       // Remember which steps pre-existed, so edit-Cancel only cleans up ones added now.
@@ -66,11 +67,13 @@ foam.CLASS({
     },
 
     function render() {
-      this.SUPER();
       var self = this;
+      self.SUPER();
 
-      this.addClass()
-        .add(this.dynamic(function(data, controllerMode) {
+      self.addClass()
+        // dynamic() is ExpressionSlot for the DOM: parameter names map to same-named slots
+        // on 'self', re-running and rebuilding the subtree whenever any of them changes.
+        .add(self.dynamic(function(data, controllerMode) {
           if ( ! data ) return;
           var editing = controllerMode == 'EDIT' || controllerMode == 'CREATE';
 
@@ -95,10 +98,9 @@ foam.CLASS({
                 .on('click', () => self.addStep())
               .end();
             })
-            .add(self.slot(function(editSteps) {
-              var e = self.E();
-              ( editSteps || [] ).forEach(function(step) {
-                e.start().addClass(self.myClass('step'))
+            .add(self.dynamic(function(data$editSteps) {
+              ( data$editSteps || [] ).forEach((step) => {
+                this.start().addClass(self.myClass('step'))
                   .callIf(editing, function() {
                     this.start().addClass(self.myClass('step-header'))
                       .start('button')
@@ -111,8 +113,7 @@ foam.CLASS({
                   .tag({ class: 'foam.u2.detail.SectionedDetailView', data: step })
                 .end();
               });
-              return e;
-            }, data.editSteps$))
+            }))
           .end();
         }));
     },

@@ -42,14 +42,16 @@ foam.CLASS({
       name: 'description'
     },
     {
-      // UI-only working set of steps while editing; the save ComicsAction persists them.
+      // Temporary in-memory working copy of steps for the current edit/create session.
+      // Not stored. The save ComicsAction persists them to the DAO when the user saves.
       class: 'Array',
       name: 'editSteps',
       transient: true,
       hidden: true
     },
     {
-      // Ids present when editing began; lets discardSteps keep pre-existing steps on Cancel.
+      // Snapshot of step ids that existed when editing began. Not stored.
+      // discardSteps uses this to avoid deleting pre-existing steps when the user cancels.
       class: 'Array',
       name: 'loadedStepIds',
       transient: true,
@@ -90,27 +92,32 @@ foam.CLASS({
     }
   ],
 
+  // In all action code functions: 'this' is the record, 'x' is the Comics execution
+  // context — the same __context__ every FOAM object carries, injected by the controller.
   actions: [
     {
-      // Overrides comics Save for edit and create; this=record, x=context. Persists the
+      // Overrides comics Save for edit and create. Persists the
       // recipe + its steps, then finishes per controller.
       class: 'foam.comics.v3.ComicsAction',
       name: 'save',
       code: async function(x) {
-        // config is exported by the DAOController, so it's reachable from either flow.
+        // config is the controller's config, which has the DAO to persist the recipe. 
         var recipe = await x.config.dao.put(this);
+
+        // now we can persist the steps, which need the recipeId to link to.
         await this.saveSteps(x, recipe.id);
 
-        if ( x.detailView ) {
-          // Edit: reflect the saved record and drop back to VIEW.
-          x.detailView.data = recipe;
-          x.detailView.finished.pub();
+        // adjust the view and navigation per Comics conventions: edit returns to VIEW, create navigates to the new record.
+        var isEdit     = !! x.detailView;
+        var innerView  = x.detailView || x.createView;
+        innerView.data = recipe;
+        innerView.finished.pub();
+        if ( isEdit ) {
+          // Broadcast reset to all DAO listeners so any live views re-query (needed to refresh BROWSE).
           x.config.dao.on.reset.pub();
-          x.detailView.controllerMode = 'VIEW';
-        } else if ( x.createView ) {
+          innerView.controllerMode = 'VIEW';
+        } else {
           // Create: navigate to the new record's detail.
-          x.createView.data = recipe;
-          x.createView.finished.pub();
           x.daoController && ( x.daoController.route = recipe.id );
         }
         x.notify(recipe.toSummary() + ' saved', '', foam.log.LogLevel.INFO, true);
