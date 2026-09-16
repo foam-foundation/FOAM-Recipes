@@ -66,7 +66,7 @@ foam.CLASS({
   ],
 
   css: `
-    ^ { display: flex; flex-direction: column; gap: 8px; align-items: stretch; background: #ffe0b2; }
+    ^ { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
     ^empty { color: #888; font-style: italic; }
     ^row {
       display: flex; align-items: center; justify-content: space-between;
@@ -110,9 +110,7 @@ foam.CLASS({
           self.invalidate = false;   // mark as rendered
           var step = self.__context__.objData;
 
-          // A *:* needs the step's id to scope its junction, so only list rows once the
-          // step exists. A fresh step has no id yet anyway, and querying at id 0 would
-          // surface unrelated rows.
+          // No step yet, or step not yet saved — no amounts to show.
           if ( ! step || ! step.id ) {
             this.start().addClass(self.myClass('empty'))
               .add('No ingredient amounts yet.')
