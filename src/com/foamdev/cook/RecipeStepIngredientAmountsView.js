@@ -61,7 +61,10 @@ foam.CLASS({
       // that change — so there's no DAO event to bind to. Alternative: subscribe to
       // step.ingredientAmounts.junctionDAO.on and rebuild; we signal ourselves instead
       // since this view owns every mutation.
-      documentation: 'Toggled after add/remove/edit to re-render the list.'
+      documentation: 'Set to true after add/remove/edit to trigger a re-render; resets itself to false via postSet.',
+      postSet: function(_, newValue) {
+        if ( newValue ) this.invalidate = false;
+      }
     }
   ],
 
@@ -85,6 +88,10 @@ foam.CLASS({
     ^btn-remove { background: #cc0000; color: white; padding: 4px 10px; }
   `,
 
+  messages: [
+    { name: 'EMPTY_MESSAGE', message: 'No ingredients yet.' }
+  ],
+
   actions: [
     {
       name: 'newIngredientAmount',
@@ -107,14 +114,11 @@ foam.CLASS({
       this.addClass()
         // dynamic() re-runs whenever 'invalidate' changes (add / remove / edit).
         .add(this.dynamic(function(invalidate) {
-          self.invalidate = false;   // mark as rendered
           var step = self.__context__.objData;
 
-          // No step yet, or step not yet saved — no amounts to show.
+          // Step not yet saved — no DAO to query.
           if ( ! step || ! step.id ) {
-            this.start().addClass(self.myClass('empty'))
-              .add('No ingredient amounts yet.')
-            .end();
+            this.start().addClass(self.myClass('empty')).add(self.EMPTY_MESSAGE).end();
             return;
           }
 
@@ -137,6 +141,11 @@ foam.CLASS({
                 .end();
               })
             .end();
+          }, {
+            // Step saved but all amounts removed.
+            onEmpty: function() {
+              this.start().addClass(self.myClass('empty')).add(self.EMPTY_MESSAGE).end();
+            }
           });
         }))
 
@@ -199,7 +208,7 @@ foam.CLASS({
           .end()
         .end();
 
-      this.add(popup);
+      popup.open();
     },
 
     async function attachExisting(id) {
@@ -275,8 +284,8 @@ foam.CLASS({
             .end()
           .end()
         .end();
-
-      this.add(popup);
+      // this.add(popup);
+      popup.open();
     }
   ]
 });
