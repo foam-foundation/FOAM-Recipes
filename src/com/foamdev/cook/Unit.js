@@ -11,7 +11,6 @@ foam.ENUM({
     { name: 'LITER' },
     { name: 'POUND' },
     { name: 'OUNCE' },
-    { name: 'PIECE' },
     { name: 'PINCH' }
   ]
 })

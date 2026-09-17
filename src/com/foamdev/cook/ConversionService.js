@@ -35,13 +35,18 @@ foam.CLASS({
   package: 'com.foamdev.cook',
   name: 'ConversionResponse',
 
-  documentation: 'Response object containing the converted amount',
+  documentation: 'Response object containing the converted amount and an optional note from the server.',
 
   properties: [
     {
       class: 'Float',
       name: 'amount',
       documentation: 'The converted amount'
+    },
+    {
+      class: 'String',
+      name: 'message',
+      documentation: 'Optional note from the server, e.g. when conversion assumptions were made.'
     }
   ]
 });

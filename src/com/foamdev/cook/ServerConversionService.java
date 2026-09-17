@@ -38,6 +38,7 @@ public class ServerConversionService extends ContextAwareSupport implements Conv
     VOLUME_TO_ML.put(Unit.CUP, 236.588);
     VOLUME_TO_ML.put(Unit.MILLILITER, 1.0);
     VOLUME_TO_ML.put(Unit.LITER, 1000.0);
+    VOLUME_TO_ML.put(Unit.PINCH, 0.6161);  // 1/8 teaspoon
 
     // Weight units → grams
     WEIGHT_TO_GRAMS.put(Unit.GRAM, 1.0);
@@ -83,9 +84,24 @@ public class ServerConversionService extends ContextAwareSupport implements Conv
       return response;
     }
 
-    // Cannot convert between volume and weight - throw exception
+    // Cross-conversion using water density (1 ml = 1 g) — accurate for water-based
+    // liquids and a standard cooking approximation for other ingredients.
+    if ( VOLUME_UNITS.contains(fromUnit) && WEIGHT_UNITS.contains(toUnit) ) {
+      double inMl = amount * VOLUME_TO_ML.get(fromUnit);
+      response.setAmount((float) (inMl / WEIGHT_TO_GRAMS.get(toUnit)));
+      response.setMessage("Approximate — based on water density (1 ml = 1 g).");
+      return response;
+    }
+
+    if ( WEIGHT_UNITS.contains(fromUnit) && VOLUME_UNITS.contains(toUnit) ) {
+      double inMl = amount * WEIGHT_TO_GRAMS.get(fromUnit);
+      response.setAmount((float) (inMl / VOLUME_TO_ML.get(toUnit)));
+      response.setMessage("Approximate — based on water density (1 ml = 1 g).");
+      return response;
+    }
+
     throw new RuntimeException(String.format(
-      "Cannot convert between %s and %s (incompatible unit types)",
+      "Cannot convert between %s and %s",
       fromUnit.getLabel(), toUnit.getLabel()));
   }
 }

@@ -59,6 +59,18 @@ p({
   }
 })
 
+p({
+  "class":"foam.core.menu.Menu",
+  "id":"welcome",
+  "parent":"hidden",
+  "label":"Unit Converter",
+  "authenticate":true,
+  "handler":{
+    "class":"foam.core.menu.ViewMenu",
+    "view":{"class":"com.foamdev.cook.UnitConversionPage"}
+  }
+})
+
 
 
 
