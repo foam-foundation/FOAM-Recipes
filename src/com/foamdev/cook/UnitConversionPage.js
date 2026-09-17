@@ -22,44 +22,61 @@ foam.CLASS({
 
   imports: ['conversionService'],
 
+  sections: [
+    { name: 'converter', title: '' }
+  ],
+
   properties: [
     {
       class: 'Float',
       name: 'amount',
       value: 1,
-      min: 0
+      min: 0,
+      section: 'converter',
+      // 4/12 cols on SM+ (≥576px); 2/6 cols on XS — keeps all three fields on one row at both breakpoints
+      gridColumns: { columns: 4, xsColumns: 2 }
     },
     {
       class: 'Enum',
       of: 'com.foamdev.cook.Unit',
       name: 'fromUnit',
-      factory: function() { return this.Unit.CUP; }
+      factory: function() { return this.Unit.CUP; },
+      section: 'converter',
+      gridColumns: { columns: 4, xsColumns: 2 }
     },
     {
       class: 'Enum',
       of: 'com.foamdev.cook.Unit',
       name: 'toUnit',
-      factory: function() { return this.Unit.MILLILITER; }
+      factory: function() { return this.Unit.MILLILITER; },
+      section: 'converter',
+      gridColumns: { columns: 4, xsColumns: 2 }
     },
     {
       class: 'Float',
-      name: 'result'
+      name: 'result',
+      precision: 2,
+      hidden: true
     },
     {
       class: 'Boolean',
-      name: 'hasResult'
+      name: 'hasResult',
+      hidden: true
     },
     {
       class: 'String',
-      name: 'conversionError'
+      name: 'conversionError',
+      hidden: true
     },
     {
       class: 'Boolean',
-      name: 'converting'
+      name: 'converting',
+      hidden: true
     },
     {
       class: 'String',
-      name: 'resultMessage'
+      name: 'resultMessage',
+      hidden: true
     }
   ],
 
@@ -79,30 +96,6 @@ foam.CLASS({
       border: 1px solid #e0e0e0;
       border-radius: 8px;
       padding: 28px;
-    }
-
-    ^form-row {
-      display: flex;
-      align-items: flex-end;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    ^field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex: 1;
-      min-width: 120px;
-    }
-    ^field-label {
-      font-size: 13px;
-      font-weight: 500;
-      color: #555;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-    ^btn-wrap {
-      padding-bottom: 2px;
     }
 
     ^result {
@@ -145,6 +138,7 @@ foam.CLASS({
     {
       name: 'convert',
       label: 'Convert',
+      section: 'converter',
       isEnabled: function(converting, amount) {
         return ! converting && amount > 0;
       },
@@ -160,9 +154,9 @@ foam.CLASS({
             toUnit:   this.toUnit
           });
           var response     = await this.conversionService.convert(this.__subContext__, request);
-          this.result      = response.amount;
+          this.result        = response.amount;
           this.resultMessage = response.message || '';
-          this.hasResult   = true;
+          this.hasResult     = true;
         } catch(e) {
           this.conversionError = (e && (e.message || e.toString())) || 'Conversion failed.';
         } finally {
@@ -187,31 +181,13 @@ foam.CLASS({
         .end()
 
         .start().addClass(this.myClass('card'))
-          .start().addClass(this.myClass('form-row'))
-            .start().addClass(this.myClass('field'))
-              .start('label').addClass(this.myClass('field-label')).add('Amount').end()
-              .startContext({ data: self })
-                .add(self.AMOUNT)
-              .endContext()
-            .end()
-            .start().addClass(this.myClass('field'))
-              .start('label').addClass(this.myClass('field-label')).add('From').end()
-              .startContext({ data: self })
-                .add(self.FROM_UNIT)
-              .endContext()
-            .end()
-            .start().addClass(this.myClass('field'))
-              .start('label').addClass(this.myClass('field-label')).add('To').end()
-              .startContext({ data: self })
-                .add(self.TO_UNIT)
-              .endContext()
-            .end()
-            .start().addClass(this.myClass('btn-wrap'))
-              .startContext({ data: self })
-                .add(self.CONVERT)
-              .endContext()
-            .end()
-          .end()
+          .tag({
+            class:       'foam.u2.detail.SectionView',
+            data:        self,
+            of:          'com.foamdev.cook.UnitConversionPage',
+            sectionName: 'converter',
+            showTitle:   false
+          })
 
           .add(this.dynamic(function(hasResult, result, conversionError, fromUnit, toUnit, amount, resultMessage) {
             if ( conversionError ) {
@@ -221,14 +197,13 @@ foam.CLASS({
               return;
             }
             if ( hasResult ) {
-              var fromLabel = fromUnit ? fromUnit.label : '';
-              var toLabel   = toUnit   ? toUnit.label   : '';
+              var fmt = new Intl.NumberFormat(foam.locale, { maximumFractionDigits: self.RESULT.precision }).format(result);
               this.start().addClass(self.myClass('result'))
                 .start().addClass(self.myClass('result-value'))
-                  .add((result % 1 === 0 ? result : result.toFixed(4).replace(/\.?0+$/, '')) + ' ' + toLabel)
+                  .add(fmt + ' ' + toUnit.label)
                 .end()
                 .start().addClass(self.myClass('result-label'))
-                  .add(amount + ' ' + fromLabel + ' = ' + result.toFixed(4).replace(/\.?0+$/, '') + ' ' + toLabel)
+                  .add(amount + ' ' + fromUnit.label + ' = ' + fmt + ' ' + toUnit.label)
                 .end()
                 .callIf(resultMessage, function() {
                   this.start('p').addClass(self.myClass('note'))
